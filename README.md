@@ -208,6 +208,9 @@ BM25 top-20 là **khó nhất có thể** — trong kho pháp luật, top-20 đ�
 | `docs/BaoCao_ChiTiet_Retrieval_Khim.docx` | 15 trang — giao thức đo, tham số, số liệu, bẫy đã dính |
 | `docs/pipeline_loi_DSC.html` | sơ đồ pipeline + bảng phân tích điểm mất theo nguyên nhân |
 | `docs/bang_ablation.md` | đối chứng 10 cross-encoder trên **cùng 15.000 cặp** |
+| **`CLAUDE.md`** | **nguồn sự thật, ~1.820 dòng** — mọi kết luận kèm phép đo đứng sau nó, 12 quy tắc phương pháp, 8 bẫy kỹ thuật, toàn bộ lịch sử quyết định |
+| `docs/HUONG_DA_DONG.md` | sổ kết quả âm — bản cô đọng của `CLAUDE.md`, đọc được cho người ngoài |
+| `docs/CLAUDE_LUUTRU_den_28-08.md` | nhật ký chi tiết 12–28/08 (~4.000 dòng) |
 | `docs/NHAT_KY_KY_THUAT.md` | nhật ký kỹ thuật — mọi kết luận kèm phép đo đứng sau nó |
 
 **Một kết quả từ bảng đối chứng:** số tham số không dự đoán được chất lượng.
