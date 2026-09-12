@@ -23,3 +23,12 @@ probe.zip
 ~$*
 .ipynb_checkpoints/
 .DS_Store
+
+# ── Tập huấn luyện dẫn xuất: dựng lại được bằng src/build_*.py, quá lớn cho git ──
+trainset_listwise*.jsonl
+pairset_*.jsonl
+
+# ── Trọng số model đã tinh chỉnh ──
+ft_listwise/
+judge_pair/
+*.safetensors

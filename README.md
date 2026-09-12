@@ -1,15 +1,30 @@
 # project_DSC — Truy hồi văn bản pháp luật tiếng Việt (DSC 2026, Task 1)
 
-Hệ thống tra cứu văn bản pháp luật: cho một câu hỏi, trả về **5 văn bản** có khả năng
-chứa câu trả lời, trong kho **8.532 văn bản**. Chỉ số chấm là `Recall@5` macro.
+Hệ thống tra cứu văn bản pháp luật: cho một câu hỏi, tìm văn bản chứa câu trả lời
+trong kho **8.532 văn bản**.
+
+> ### ⚠️ Cập nhật 09/2026 — độ đo chính là **Precision**, không phải Recall@5
+>
+> Email BTC ngày 02/08 xác định *"Precision là độ đo chính"*, trái với tài liệu mô tả
+> dữ liệu. Đã xác minh bằng thực nghiệm: bộ chấm chia precision cho **số id thực nộp**,
+> nên bài nộp tối ưu là **1 id mỗi câu**, không phải 5.
+>
+> **Bài nộp hiện tại: `precision 0,711` · hạng 3/84.** Toàn bộ phần dưới của README này
+> mô tả giai đoạn tối ưu `Recall@5` (kết thúc ở LB 0.9124, 30/08) — vẫn đúng về mặt lịch
+> sử và mọi phép đo trong đó vẫn dùng được, nhưng **kết luận "reranker teo lại" chỉ đúng
+> ở k=5 và sai hẳn ở k=1**: đo ở hạng 1, `max(ce, ce_deep)` = 0,7100 so với thứ tự rổ
+> 0,5933, tức bộ chấm hơn rổ **+11,67 điểm**.
+>
+> Đường chạy đầy đủ của bài nộp hiện tại: **[`REPRODUCE.md`](REPRODUCE.md)**.
 
 > *Vietnamese legal document retrieval. Two-stage pipeline: hybrid retrieval
 > (chunk-level BM25 ⊕ dense bi-encoder, fused with RRF) → cross-encoder reranking with
 > deep chunk reading → slot-reservation blending. Public LB 0.9124. Reports in `docs/`
 > are in Vietnamese.*
 
-**Public leaderboard: 0.9124** · Đây là phần **xếp hạng & chốt top-5** của hệ thống
-(thành viên E); khâu sinh ứng viên do một thành viên khác phụ trách.
+**Public LB: precision 0,711 (hiện tại) · recall@5 0,9124 (giai đoạn trước).** Đây là
+phần **xếp hạng & chốt đáp án** của hệ thống (thành viên E); khâu sinh ứng viên do một
+thành viên khác phụ trách.
 
 ---
 
@@ -90,7 +105,11 @@ tên module (`from deep_chunk import ...`), không theo đường dẫn `src/`.
 | `src/rerank_from_d.py` | chấm ứng viên, `blend_bm25_first` (quy tắc giữ chỗ) |
 | `src/metrics.py` | `Recall@k` / `Precision@k` đúng công thức BTC, kèm 10 test bắt lỗi âm thầm |
 | `src/rerank_qwen.py` | chạy reranker kiểu decoder, đếm tham số thật dưới lượng tử hoá 4-bit |
-| `notebooks/fusion_v3_run.ipynb` | lượt chạy sinh ra bài nộp hiện tại |
+| `notebooks/public_ft_run.ipynb` | **lượt chạy sinh ra bài nộp hiện tại** (precision 0,711) |
+| `notebooks/finetune_listwise_run.ipynb` | tinh chỉnh listwise — hiệu ứng dương duy nhất sống sót khi ra bảng thật |
+| `src/build_trainset.py` | dựng tập huấn luyện listwise (âm hạng 10–20) |
+| `src/k_tran.py` | đo trần trục `k` trên CPU + đủ bộ cổng kiểm bài nộp |
+| `notebooks/fusion_v3_run.ipynb` | lượt chạy sinh ra bài nộp của giai đoạn Recall@5 |
 
 ## Tái hiện phân tích — không cần GPU
 
@@ -134,6 +153,28 @@ giờ GPU, không phải phỏng đoán.
 | Ưu tiên văn bản mới nhất | gold là văn bản mới nhất đúng 2,0% = ngẫu nhiên |
 | Ghép tên văn bản vào truy vấn | slug không dấu −2,0; tiêu đề có dấu +1,00 nhưng 83% trùng tín hiệu sẵn có |
 | Nâng `K` 20→50 | 14,8 giờ GPU cho **+0,06 điểm** |
+| Hạ `K` 50→20 hoặc →10 | trần chỉ ~17 câu/1000 — dưới sàn nhiễu |
+| Nhét điểm BM25 vào input cross-encoder ([ECIR 2023](https://arxiv.org/abs/2301.09728)) | 53,7% trên tập cần cứu = **tung xu** |
+| Negative hạng 2–10 thay vì 10–20 khi tinh chỉnh | thắng 4 · thua 4 · **hoà 4** trên 12 ô |
+| Khớp thẩm quyền / phạm vi pháp lý | trần 1,60 điểm, và thứ bậc trỏ **ngược dấu** |
+| **Bộ phân xử cặp** (pairwise judge) | dev300 **+2,33 (p<0,05)** → LB **−1,4** |
+
+### Quy luật quan trọng nhất: cái gì CHUYỂN được từ tập dev sang tập thi
+
+| can thiệp | bản chất | tập dev | **tập thi thật** |
+|---|---|---|---|
+| cộng RRF vào điểm | **phân xử top-2** | +0,6…+2,3 | **−0,9** |
+| `replace` thay `max` | **phân xử top-2** | −2,00 | **−3,1** |
+| bộ phân xử cặp | **phân xử top-2** | **+2,33** (p<0,05) | **−1,4** |
+| tinh chỉnh listwise | **đổi hàm chấm** | +1,4…+1,9 | **+1,0** ✅ |
+
+> **Mọi can thiệp vào *quyết định* hạng 1 vs hạng 2 đều không chuyển được. Can thiệp vào
+> *hàm chấm* thì chuyển được.** Ba lần trên ba lần — kể cả khi vượt ngưỡng ý nghĩa thống kê
+> đã khoá trước khi chạy.
+
+Đây là kết quả âm đáng giá nhất của dự án: nó đóng cả một *họ* phương pháp (bộ phân xử cặp,
+thang Elo, MLP đặc trưng, khớp phạm vi) bằng bốn điểm dữ liệu, chứ không phải đóng từng cái một.
+Chi tiết: [`docs/HUONG_DA_DONG.md`](docs/HUONG_DA_DONG.md).
 
 **Vì sao tinh chỉnh hỏng** (chẩn đoán, không phải "không làm được"): negative lấy từ
 BM25 top-20 là **khó nhất có thể** — trong kho pháp luật, top-20 đầy văn bản trả lời
